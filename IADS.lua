@@ -21,11 +21,12 @@ local IADSSAMARMDetection = true -- 1 = SAM detectionf of ARMs on, 0 = SAM detec
 local EWRAssociationRange = 80000 --Range of an EWR in which SAMs are controlled
 local IADSARMHideRangeRadio = 120000 --Range within which ARM launches are detected via radio
 local IADSARMHidePctage = 20 -- %age chance of radio detection of ARM launch causing SAM shutdown
-local EWRARMShutdownChance = 25 -- %age chance EWR detection of ARM causing SAM shutdown
-local SAMARMShutdownChance = 75-- %age chance SAM detection of ARM causings SAM shuttown
+local EWRARMShutdownChance = 75 -- %age chance EWR detection of ARM causing SAM shutdown
+local SAMARMShutdownChance = 80-- %age chance SAM detection of ARM causings SAM shuttown
 local trackMemory = 20 -- Track persistance time after last detection
 local controlledSAMNoAmmo = true -- Have controlled SAMs stay off if no ammo remaining.
 local uncontrolledSAMNoAmmo = false -- Have uncontrolled SAMs stay off if no ammo remaining
+local blinkEnable = false -- Whether or not to blink short-range SAMs
 local SAMSites = {}
 local EWRSites = {}
 local toHide = {}
@@ -291,20 +292,20 @@ local function SAMCheckHidden()
 end
 
 local function BlinkSAM()
-  for _, SAM in pairs(SAMSites) do
-    if tablelength(SAM.ControlledBy) < 1 then
-      if SAM.BlinkTimer < 1  and (not SAM.Hidden) then
-        if SAM.Enabled then
-          disableSAM(SAM)
-          SAM.BlinkTimer = math.random(30,60)
+  if blinkEnable then
+    for _, SAM in pairs(SAMSites) do
+        if SAM.BlinkTimer < 1  and (not SAM.Hidden) then
+          if SAM.Enabled then
+            disableSAM(SAM)
+            SAM.BlinkTimer = math.random(200,400)
+          else
+            enableSAM(SAM)
+            SAM.BlinkTimer = math.random(30,60)
+          end
         else
-          enableSAM(SAM)
-          SAM.BlinkTimer = math.random(30,60)
+        SAM.BlinkTimer = SAM.BlinkTimer - 2
         end
-      else
-      SAM.BlinkTimer = SAM.BlinkTimer - 2
       end
-    end
   end
   return timer.getTime() + 2
 end
@@ -321,13 +322,13 @@ local function checkGroupRole(gp)
   if gp:getCategory() == 2 then
       for _, unt in pairs(gp:getUnits()) do
         if unt:hasAttribute("EWR") then
-        isEWR = true
-        numEWRRadars = numEWRRadars + 1
-      elseif unt:hasAttribute("SAM TR") then
-        isSAM = true
-        samType = unt:getTypeName()
-        numSAMRadars = numSAMRadars + 1
-      end
+          isEWR = true
+          numEWRRadars = numEWRRadars + 1
+        elseif (unt:hasAttribute("SAM TR") and not(unt:hasAttribute("Mobile AAA"))) then
+          isSAM = true
+          samType = unt:getTypeName()
+          numSAMRadars = numSAMRadars + 1
+        end
       if unt:hasAttribute("Datalink") then
         hasDL = true
       end
